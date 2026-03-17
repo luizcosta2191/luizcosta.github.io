@@ -1,0 +1,23 @@
+[
+  {
+    "name": "vault",
+    "description": "Python/Flask web app for secure file encryption using AES-256-GCM, containerized with Docker.",
+    "language": "Python",
+    "topics": ["flask", "docker", "security"],
+    "icon": "🔐"
+  },
+  {
+    "name": "docker-multiservice",
+    "description": "Docker Compose environment with Nginx, PHP 5.6/7.0, Redis and Memcached.",
+    "language": "Dockerfile",
+    "topics": ["docker", "nginx", "redis"],
+    "icon": "🐳"
+  },
+  {
+    "name": "aws-iac",
+    "description": "Terraform modules and Ansible playbooks for provisioning AWS infrastructure.",
+    "language": "HCL",
+    "topics": ["terraform", "ansible", "aws"],
+    "icon": "☁️"
+  }
+]
