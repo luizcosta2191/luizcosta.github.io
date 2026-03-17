@@ -96,6 +96,38 @@
     pointer-events: none;
   }
 
+  .avatar-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: -44px;
+    position: relative;
+    z-index: 10;
+    margin-bottom: -10px;
+  }
+
+  .avatar-wrapper img {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    border: 3px solid var(--accent);
+    background: var(--bg);
+    display: block;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+
+  .avatar-wrapper .avatar-placeholder {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    border: 3px solid var(--accent);
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+
   .badges-row {
     display: flex;
     flex-wrap: wrap;
@@ -384,6 +416,11 @@
   <div class="banner-overlay"></div>
 </div>
 
+<div class="avatar-wrapper">
+  <img id="github-avatar" src="" alt="Luiz Costa" style="display:none;">
+  <div class="avatar-placeholder" id="avatar-placeholder">👤</div>
+</div>
+
 <div class="badges-row">
   <span class="badge badge-aws">☁️ AWS Cloud Practitioner</span>
   <span class="badge badge-linux">🐧 Linux Advanced</span>
@@ -527,6 +564,24 @@
     });
   }, { threshold: 0.08 });
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // ── GitHub API: load avatar ──
+  async function loadAvatar() {
+    try {
+      const res  = await fetch(`https://api.github.com/users/${GITHUB_USER}`);
+      const user = await res.json();
+      if (user.avatar_url) {
+        const img = document.getElementById('github-avatar');
+        const placeholder = document.getElementById('avatar-placeholder');
+        img.src = user.avatar_url;
+        img.onload = () => {
+          img.style.display = 'block';
+          placeholder.style.display = 'none';
+        };
+      }
+    } catch (e) { /* keep placeholder */ }
+  }
+  loadAvatar();
 
   // ── GitHub API: load repos ──
   const GITHUB_USER = 'luizcosta2191';
