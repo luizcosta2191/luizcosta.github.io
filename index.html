@@ -544,7 +544,7 @@
 <div class="container" id="projects">
   <div class="section-heading reveal">🚀 Projects</div>
   <p style="color:var(--muted);font-size:12px;margin-bottom:1.5rem;" class="reveal">
-    Fetched automatically from GitHub · sorted by most recently updated
+    Pinned projects · managed via <code style="color:var(--accent2);">pinned.json</code>
   </p>
   <div class="projects-grid" id="projects-grid">
     <div class="project-card skeleton"></div>
@@ -604,10 +604,8 @@
   }, { threshold: 0.08 });
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-  // ── GitHub API: load repos ──
+  // ── Pinned repos via pinned.json ──
   const GITHUB_USER = 'luizcosta2191';
-  const EXCLUDED    = [GITHUB_USER + '.github.io']; // hide the portfolio repo itself
-  const MAX_REPOS   = 6;
 
   const langColors = {
     Python: '#3776AB', JavaScript: '#F7DF1E', TypeScript: '#3178C6',
@@ -620,21 +618,22 @@
     return langColors[lang] || '#8b949e';
   }
 
-  function repoIcon(repo) {
-    const name = (repo.name + ' ' + (repo.description || '')).toLowerCase();
-    if (name.includes('docker') || name.includes('container')) return '🐳';
-    if (name.includes('k8s') || name.includes('kubernetes'))   return '☸️';
-    if (name.includes('terraform') || name.includes('iac'))    return '🏗️';
-    if (name.includes('ansible'))                              return '⚙️';
-    if (name.includes('aws') || name.includes('cloud'))        return '☁️';
-    if (name.includes('vault') || name.includes('crypt') || name.includes('encrypt')) return '🔐';
-    if (name.includes('monitor') || name.includes('grafana') || name.includes('zabbix')) return '📊';
-    if (name.includes('bash') || name.includes('script') || name.includes('shell'))     return '💻';
-    if (name.includes('python'))                               return '🐍';
+  function repoIcon(name, desc) {
+    const str = (name + ' ' + (desc || '')).toLowerCase();
+    if (str.includes('docker') || str.includes('container')) return '🐳';
+    if (str.includes('k8s') || str.includes('kubernetes'))   return '☸️';
+    if (str.includes('terraform') || str.includes('iac'))    return '🏗️';
+    if (str.includes('ansible'))                             return '⚙️';
+    if (str.includes('aws') || str.includes('cloud'))        return '☁️';
+    if (str.includes('vault') || str.includes('crypt') || str.includes('encrypt')) return '🔐';
+    if (str.includes('monitor') || str.includes('grafana') || str.includes('zabbix')) return '📊';
+    if (str.includes('bash') || str.includes('script') || str.includes('shell'))     return '💻';
+    if (str.includes('python'))                              return '🐍';
     return '📁';
   }
 
   function timeAgo(dateStr) {
+    if (!dateStr) return '';
     const diff = Date.now() - new Date(dateStr).getTime();
     const d = Math.floor(diff / 86400000);
     if (d === 0) return 'today';
@@ -644,51 +643,62 @@
     return Math.floor(d / 365) + 'y ago';
   }
 
-  async function loadRepos() {
+  function renderCard(r) {
+    const tags = [r.language, ...(r.topics || [])]
+      .filter(Boolean).slice(0, 3)
+      .map(t => `<span class="project-tag">${t}</span>`).join('');
+
+    const desc = r.description || 'No description provided.';
+    const icon = r.icon || repoIcon(r.name, r.description);
+    const url  = r.url || `https://github.com/${GITHUB_USER}/${r.name}`;
+
+    return `
+      <a href="${url}" target="_blank" class="project-card">
+        <div class="project-card-header">
+          <div class="project-icon">${icon}</div>
+          <div class="project-arrow">↗</div>
+        </div>
+        <div class="project-name">${r.name}</div>
+        <div class="project-desc">${desc}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:0.75rem;">
+          <div class="project-tags">${tags}</div>
+          ${r.language ? `
+          <span style="font-size:10px;color:var(--muted);white-space:nowrap;margin-left:8px;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${langColor(r.language)};margin-right:4px;vertical-align:middle;"></span>
+            ${r.language}
+          </span>` : ''}
+        </div>
+      </a>`;
+  }
+
+  async function loadPinned() {
     const grid  = document.getElementById('projects-grid');
     const error = document.getElementById('projects-error');
     try {
-      const res  = await fetch(
-        `https://api.github.com/users/${GITHUB_USER}/repos?sort=pushed&per_page=100&type=public`
+      // 1. Load pinned.json from same repo
+      const res = await fetch('pinned.json?nocache=' + Date.now());
+      if (!res.ok) throw new Error('pinned.json not found');
+      const pinned = await res.json(); // array of repo names or objects
+
+      if (!pinned.length) throw new Error('empty');
+
+      // 2. For each entry, fetch repo data from GitHub API
+      const repoData = await Promise.all(
+        pinned.map(async entry => {
+          const repoName = typeof entry === 'string' ? entry : entry.name;
+          const override = typeof entry === 'object' ? entry : {};
+          try {
+            const r = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${repoName}`);
+            const data = await r.json();
+            return { ...data, ...override, name: data.name, description: override.description || data.description };
+          } catch {
+            // If API fails, use only what's in pinned.json
+            return override;
+          }
+        })
       );
-      if (!res.ok) throw new Error('GitHub API error');
-      const all  = await res.json();
-      const repos = all
-        .filter(r => !r.fork && !EXCLUDED.includes(r.name))
-        .slice(0, MAX_REPOS);
 
-      if (!repos.length) throw new Error('No repos');
-
-      grid.innerHTML = repos.map(r => {
-        const tags = [r.language, r.topics?.[0], r.topics?.[1]]
-          .filter(Boolean)
-          .slice(0, 3)
-          .map(t => `<span class="project-tag">${t}</span>`)
-          .join('');
-
-        const desc = r.description
-          ? r.description
-          : 'No description provided.';
-
-        return `
-          <a href="${r.html_url}" target="_blank" class="project-card">
-            <div class="project-card-header">
-              <div class="project-icon">${repoIcon(r)}</div>
-              <div class="project-arrow">↗</div>
-            </div>
-            <div class="project-name">${r.name}</div>
-            <div class="project-desc">${desc}</div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:0.75rem;">
-              <div class="project-tags">${tags}</div>
-              <span style="font-size:10px;color:var(--muted);white-space:nowrap;margin-left:8px;">
-                ${r.language
-                  ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${langColor(r.language)};margin-right:4px;vertical-align:middle;"></span>`
-                  : ''}
-                ${timeAgo(r.pushed_at)}
-              </span>
-            </div>
-          </a>`;
-      }).join('');
+      grid.innerHTML = repoData.filter(Boolean).map(renderCard).join('');
 
     } catch (e) {
       grid.innerHTML = '';
@@ -696,6 +706,6 @@
     }
   }
 
-  loadRepos();
+  loadPinned();
 </script></body>
 </html>
