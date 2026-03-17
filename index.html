@@ -99,33 +99,28 @@
   .avatar-wrapper {
     display: flex;
     justify-content: center;
-    margin-top: -44px;
+    margin-top: -64px;
     position: relative;
     z-index: 10;
-    margin-bottom: -10px;
+    margin-bottom: 0px;
   }
 
-  .avatar-wrapper img {
-    width: 88px;
-    height: 88px;
-    border-radius: 50%;
-    border: 3px solid var(--accent);
-    background: var(--bg);
-    display: block;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-  }
-
+  .avatar-wrapper img,
   .avatar-wrapper .avatar-placeholder {
-    width: 88px;
-    height: 88px;
+    width: 128px;
+    height: 128px;
     border-radius: 50%;
-    border: 3px solid var(--accent);
+    border: 4px solid var(--accent);
     background: var(--surface2);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2rem;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    box-shadow: 0 0 0 4px var(--bg), 0 8px 32px rgba(0,0,0,0.6);
+    object-fit: cover;
+  }
+
+  .avatar-wrapper .avatar-placeholder {
+    font-size: 3.5rem;
   }
 
   .badges-row {
@@ -417,8 +412,11 @@
 </div>
 
 <div class="avatar-wrapper">
-  <img id="github-avatar" src="" alt="Luiz Costa" style="display:none;">
-  <div class="avatar-placeholder" id="avatar-placeholder">👤</div>
+  <img id="github-avatar"
+       src="https://avatars.githubusercontent.com/luizcosta2191"
+       alt="Luiz Costa"
+       onerror="this.style.display='none';document.getElementById('avatar-placeholder').style.display='flex';">
+  <div class="avatar-placeholder" id="avatar-placeholder" style="display:none;">👤</div>
 </div>
 
 <div class="badges-row">
@@ -564,24 +562,6 @@
     });
   }, { threshold: 0.08 });
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-
-  // ── GitHub API: load avatar ──
-  async function loadAvatar() {
-    try {
-      const res  = await fetch(`https://api.github.com/users/${GITHUB_USER}`);
-      const user = await res.json();
-      if (user.avatar_url) {
-        const img = document.getElementById('github-avatar');
-        const placeholder = document.getElementById('avatar-placeholder');
-        img.src = user.avatar_url;
-        img.onload = () => {
-          img.style.display = 'block';
-          placeholder.style.display = 'none';
-        };
-      }
-    } catch (e) { /* keep placeholder */ }
-  }
-  loadAvatar();
 
   // ── GitHub API: load repos ──
   const GITHUB_USER = 'luizcosta2191';
